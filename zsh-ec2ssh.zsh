@@ -79,10 +79,16 @@ function zsh-ec2ssh() {
     fi
 
     echo "Fetching ec2 host..."
-    local selected_host=$(myaws ec2 ls --profile=${aws_profile_name} --region=${aws_region} --fields='InstanceId PublicIpAddress LaunchTime Tag:Name Tag:attached_asg' | sort -k4 | peco | cut -f2)
+    local selected_item=$(myaws ec2 ls --profile=${aws_profile_name} --region=${aws_region} --fields='InstanceId PrivateIpAddress LaunchTime Tag:User Tag:KeyName Tag:Name Tag:attached_asg' | sort -k4 | peco)
+
+    local selected_host=$(echo $selected_item | cut -f2)
+    local selected_user=$(echo $selected_item | cut -f4)
+    local selected_key_name=$(echo $selected_item | cut -f5)
+    target_private_key_path="~/.ssh/${selected_key_name}"
+
     if [ -n "${selected_host}" ]; then
         if [ -z "${proxy_host}" ]; then
-            BUFFER="ssh -i ${target_private_key_path} -p ${target_port} ${target_user}@${selected_host} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+            BUFFER="ssh -i ${target_private_key_path} -p ${target_port} ${selected_user}@${selected_host} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
         else
             BUFFER="ssh -i ${proxy_key_path} -p ${proxy_port} -t ${proxy_user}@${proxy_host} ssh ${target_user}@${selected_host} -i ${target_private_key_path} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
         fi
